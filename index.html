@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vocal Booth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1b1026;--panel:#271739;--line:#3b2752;--text:#f4ecfa;--mute:#a995bd;--gold:#ffbe55;--teal:#4fe0c5;--red:#ff5d6c;--onGold:#2a1800;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root{--bg:#f6f0fb;--panel:#fff;--line:#e0d3ee;--text:#241533;--mute:#6f5c85;--gold:#c77700;--teal:#00806c;--red:#d62c43;--onGold:#fff}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:500 16px/1.5 Figtree,system-ui,sans-serif;color-scheme:dark light}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font:800 34px/1 Syne,sans-serif;margin:8px 0 4px}
+h2{font:700 18px/1.2 Syne,sans-serif;margin:0 0 10px}
+p{margin:0 0 10px;color:var(--mute)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--text);padding:10px 14px;border-radius:999px;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+button.main{background:var(--gold);color:var(--onGold);border-color:var(--gold)}
+button.on{background:var(--teal);color:#06231d;border-color:var(--teal)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips button{padding:8px 13px}
+.meter{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0 12px}
+.meter i{display:block;height:100%;width:0;background:var(--teal);transition:width .06s}
+.meter.gr i{background:var(--gold)}
+.lab{font-size:14px;color:var(--mute);display:flex;justify-content:space-between}
+.rec{width:100%;padding:18px;font-size:18px;background:var(--red);border-color:var(--red);color:#fff}
+.rec.live{animation:pulse 1s infinite alternate}
+@keyframes pulse{to{box-shadow:0 0 0 8px rgba(255,93,108,.25)}}
+@media (prefers-reduced-motion:reduce){.rec.live{animation:none}}
+.sl{display:grid;grid-template-columns:1fr auto;gap:0 10px;margin:10px 0}
+.sl input{grid-column:1/3;width:100%;accent-color:var(--gold)}
+.sl b{font-weight:600;color:var(--gold);font-size:14px}
+details summary{cursor:pointer;font:700 18px Syne,sans-serif}
+.fileBtn{font-weight:600;background:var(--gold);color:var(--onGold);padding:10px 14px;border-radius:999px;cursor:pointer;display:inline-block}
+#file:focus-visible+*{outline:3px solid var(--teal)}
+.take{border-top:1px solid var(--line);padding:12px 0}
+.take audio{width:100%;margin:8px 0}
+#msg{min-height:22px;color:var(--gold);font-size:15px}
+.err{color:var(--red)!important}
+.group{font:700 13px Syne,sans-serif;color:var(--teal);margin-top:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Vocal Booth</h1>
+<p>Record your voice with a pro effects chain. Everything runs in your browser, nothing is uploaded.</p>
+
+<section>
+<h2>Microphone</h2>
+<p>Wear headphones so the beat and your monitor don’t leak into the mic.</p>
+<div class="row"><button class="main" id="micBtn">Turn on mic</button><button id="monBtn" class="on">Hear myself: on</button></div>
+<div class="lab" style="margin-top:12px"><span>Mic level</span><span id="lv">–</span></div>
+<div class="meter"><i id="lvBar"></i></div>
+<div class="lab"><span>Compressor working</span></div>
+<div class="meter gr"><i id="grBar"></i></div>
+</section>
+
+<section>
+<h2>Sound style</h2>
+<div class="row chips" id="presets"></div>
+<p style="margin-top:12px">Auto-calibrate listens to you for 6 seconds, measures your voice, and sets the cleanup, tone and compression to suit it.</p>
+<button class="main" id="autoBtn">Auto-calibrate my voice</button>
+<div id="msg" role="status"></div>
+</section>
+
+<section>
+<h2>Instrumental to sing over</h2>
+<p>Import your own instrumental (MP3, WAV or M4A), or use a built-in beat.</p>
+<div class="row"><label class="fileBtn" for="file">Import instrumental</label><input type="file" id="file" accept="audio/*" hidden><button id="useBuilt" hidden>Use built-in beat</button></div>
+<p id="bname" style="margin-top:8px;color:var(--teal)"></p>
+<div class="row chips" id="pats"></div>
+<div class="sl"><span>Tempo</span><b id="bpmV">102 BPM</b><input type="range" id="bpm" min="70" max="170" value="102" aria-label="Tempo"></div>
+<div class="sl"><span>Beat volume</span><b id="bvV">70%</b><input type="range" id="bv" min="0" max="100" value="70" aria-label="Beat volume"></div>
+<button id="beatBtn">Play beat</button>
+</section>
+
+<section>
+<h2>Record</h2>
+<button class="rec" id="recBtn">Record take</button>
+<p style="margin-top:10px">The beat starts with the recording and is not captured in your take. <span id="timer"></span></p>
+<div class="sl"><span>Sync fix (if your voice sounds late against the instrumental)</span><b id="nV">150 ms</b><input type="range" id="nudge" min="0" max="400" value="150" aria-label="Sync fix"></div>
+<div id="takes"></div>
+</section>
+
+<section>
+<details>
+<summary>Fine-tune effects</summary>
+<div id="sliders"></div>
+</details>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+let ctx,stream,N={},micOn=false,monitor=true,rec,chunks=[],recStart=0,tInt;
+const P={};
+const PRE={
+ pop:{name:'Pop vocal',v:{low:100,gate:-52,warm:1,mud:-2,pres:3,air:3,deess:-3,comp:-24,ratio:3.5,drive:.12,rev:.2,dly:.1,out:0}},
+ afro:{name:'Afrobeat',v:{low:90,gate:-52,warm:2,mud:-2,pres:2.5,air:2,deess:-3,comp:-26,ratio:4,drive:.18,rev:.16,dly:.22,out:0}},
+ rnb:{name:'R&B smooth',v:{low:80,gate:-55,warm:3,mud:-3,pres:1,air:3,deess:-4,comp:-22,ratio:3,drive:.1,rev:.3,dly:.12,out:0}},
+ rap:{name:'Rap punch',v:{low:110,gate:-45,warm:0,mud:-3,pres:4,air:1,deess:-3,comp:-28,ratio:5,drive:.2,rev:.06,dly:.05,out:0}},
+ raw:{name:'Raw',v:{low:80,gate:-60,warm:0,mud:0,pres:0,air:0,deess:0,comp:-14,ratio:1.5,drive:0,rev:.05,dly:0,out:0}}
+};
+const CT=[
+ ['Clean','low','Low cut','Hz',60,200,1],['Clean','gate','Noise gate','dB',-80,-30,1],
+ ['Tone','warm','Warmth','dB',-6,8,.5],['Tone','mud','Mud cut','dB',-8,4,.5],['Tone','pres','Presence','dB',-4,8,.5],['Tone','air','Air','dB',-4,8,.5],['Tone','deess','Harsh S tamer','dB',-9,0,.5],
+ ['Power','comp','Compressor depth','dB',-40,-6,1],['Power','ratio','Ratio','x',1,10,.5],['Power','drive','Warm saturation','',0,1,.01],
+ ['Space','rev','Reverb','',0,.6,.01],['Space','dly','Echo','',0,.5,.01],['Space','out','Output','dB',-12,6,.5]
+];
+const say=(t,e)=>{const m=$('#msg');m.textContent=t;m.className=e?'err':''};
+const sd=$('#sliders');let g='';
+CT.forEach(([gr,k,l,u,mn,mx,st])=>{
+ if(gr!==g){g=gr;sd.insertAdjacentHTML('beforeend',`<div class="group">${gr}</div>`)}
+ sd.insertAdjacentHTML('beforeend',`<div class="sl"><span>${l}</span><b id="v_${k}"></b><input type="range" id="s_${k}" min="${mn}" max="${mx}" step="${st}" aria-label="${l}"></div>`);
+});
+CT.forEach(([,k,,u])=>$('#s_'+k).addEventListener('input',e=>{P[k]=+e.target.value;paint();apply()}));
+function paint(){CT.forEach(([,k,,u])=>{$('#s_'+k).value=P[k];$('#v_'+k).textContent=(u?(+P[k]).toFixed(P[k]%1?1:0)+' '+u:Math.round(P[k]*100)+'%')})}
+function setP(o){Object.assign(P,o);paint();apply()}
+Object.entries(PRE).forEach(([k,p])=>{const b=document.createElement('button');b.textContent=p.name;b.onclick=()=>{setP(p.v);document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');say(p.name+' style loaded.')};$('#presets').append(b)});
+setP(PRE.pop.v);$('#presets button').classList.add('on');
+
+function ensure(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();return ctx}
+const lin=d=>Math.pow(10,d/20);
+function nd(type,f,g,q){const b=ctx.createBiquadFilter();b.type=type;b.frequency.value=f;if(g!=null)b.gain.value=g;if(q)b.Q.value=q;return b}
+function reverbIR(){const sr=ctx.sampleRate,len=sr*1.8,ir=ctx.createBuffer(2,len,sr);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}return ir}
+function build(){
+ const n=N;
+ n.src=ctx.createMediaStreamSource(stream);
+ n.an=ctx.createAnalyser();n.an.fftSize=2048;
+ n.hp=nd('highpass',90,null,.7);
+ n.gate=ctx.createGain();
+ n.ds=nd('peaking',7000,0,3);
+ n.mud=nd('peaking',300,0,1);
+ n.warm=nd('lowshelf',150,0);
+ n.pres=nd('peaking',3200,0,1);
+ n.air=nd('highshelf',10000,0);
+ n.comp=ctx.createDynamicsCompressor();n.comp.attack.value=.008;n.comp.release.value=.18;n.comp.knee.value=8;
+ n.mk=ctx.createGain();
+ n.bus=ctx.createGain();
+ n.sat=ctx.createWaveShaper();const c=new Float32Array(1024);for(let i=0;i<1024;i++)c[i]=Math.tanh(4*(i/512-1));n.sat.curve=c;n.sat.oversample='4x';
+ n.satW=ctx.createGain();n.dry=ctx.createGain();
+ n.conv=ctx.createConvolver();n.conv.buffer=reverbIR();n.revS=ctx.createGain();
+ n.dl=ctx.createDelay(2);n.fb=ctx.createGain();n.fb.gain.value=.35;n.dlS=ctx.createGain();
+ n.mix=ctx.createGain();n.out=ctx.createGain();
+ n.lim=ctx.createDynamicsCompressor();n.lim.threshold.value=-3;n.lim.ratio.value=20;n.lim.attack.value=.002;n.lim.release.value=.08;n.lim.knee.value=0;
+ n.master=ctx.createGain();n.mon=ctx.createGain();n.mon.gain.value=monitor?1:0;
+ n.rd=ctx.createMediaStreamDestination();
+ const ch=(...a)=>a.reduce((x,y)=>(x.connect(y),y));
+ ch(n.src,n.an);
+ ch(n.src,n.hp,n.gate,n.ds,n.mud,n.warm,n.pres,n.air,n.comp,n.mk,n.bus);
+ n.bus.connect(n.dry).connect(n.mix);
+ ch(n.bus,n.sat,n.satW,n.mix);
+ ch(n.bus,n.revS,n.conv,n.mix);
+ ch(n.bus,n.dlS,n.dl,n.mix);n.dl.connect(n.fb).connect(n.dl);
+ ch(n.mix,n.out,n.lim,n.master);
+ n.master.connect(n.rd);n.master.connect(n.mon).connect(ctx.destination);
+ apply();gateLoop();
+}
+function apply(){
+ const n=N;if(!n.hp)return;const t=ctx.currentTime,s=(p,v)=>p.setTargetAtTime(v,t,.03);
+ s(n.hp.frequency,P.low);s(n.warm.gain,P.warm);s(n.mud.gain,P.mud);s(n.pres.gain,P.pres);s(n.air.gain,P.air);s(n.ds.gain,P.deess);
+ n.comp.threshold.value=P.comp;n.comp.ratio.value=P.ratio;
+ s(n.mk.gain,lin(Math.min(12,(-P.comp)*(1-1/P.ratio)*.45)));
+ s(n.satW.gain,P.drive*.5);s(n.dry.gain,1-P.drive*.35);
+ s(n.revS.gain,P.rev);s(n.dlS.gain,P.dly);s(n.out.gain,lin(P.out));
+ n.dl.delayTime.value=60/bpm*.75;
+}
+function rmsDb(){const b=new Float32Array(N.an.fftSize);N.an.getFloatTimeDomainData(b);let s=0;for(const x of b)s+=x*x;return 10*Math.log10(s/b.length+1e-12)}
+function gateLoop(){
+ if(!micOn)return;
+ const db=rmsDb(),open=db>P.gate,t=ctx.currentTime;
+ N.gate.gain.setTargetAtTime(open?1:0,t,open?.01:.12);
+ $('#lvBar').style.width=Math.max(0,Math.min(100,(db+60)/60*100))+'%';
+ $('#lv').textContent=db<-59?'silent':Math.round(db)+' dB';
+ $('#grBar').style.width=Math.min(100,-N.comp.reduction/18*100)+'%';
+ requestAnimationFrame(gateLoop);
+}
+$('#micBtn').onclick=async()=>{
+ if(micOn)return;
+ try{
+  ensure();
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+  micOn=true;build();{const L=Math.round(((ctx.baseLatency||0)+(ctx.outputLatency||0))*1000);if(L){$('#nudge').value=Math.min(400,L+80);$('#nV').textContent=$('#nudge').value+' ms'}}$('#micBtn').textContent='Mic is on';$('#micBtn').classList.add('on');say('Mic is on. Say or sing something and watch the level.');
+ }catch(e){say('Couldn’t open the mic. Allow microphone access in your browser settings, then tap Turn on mic again.',1)}
+};
+$('#monBtn').onclick=e=>{monitor=!monitor;e.target.textContent='Hear myself: '+(monitor?'on':'off');e.target.classList.toggle('on',monitor);if(N.mon)N.mon.gain.value=monitor?1:0};
+
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+$('#autoBtn').onclick=async()=>{
+ if(!micOn)return say('Turn on the mic first.',1);
+ const fr=[],hz=ctx.sampleRate/2048,bins=[];
+ const band=(a,b)=>[Math.round(a/hz),Math.round(b/hz)];
+ const B={low:band(80,250),mud:band(250,500),mid:band(500,2000),pres:band(2000,5000),sib:band(5000,9000),air:band(9000,14000)};
+ const t0=performance.now();$('#autoBtn').disabled=true;
+ await new Promise(res=>{(function tick(){
+  const el=(performance.now()-t0)/1000;say('Sing your loudest chorus… '+Math.ceil(6-el)+'s');
+  const f=new Float32Array(1024);N.an.getFloatFrequencyData(f);fr.push({db:rmsDb(),f});
+  el<6?setTimeout(tick,50):res();
+ })()});
+ $('#autoBtn').disabled=false;
+ const dbs=fr.map(x=>x.db).sort((a,b)=>a-b),pc=p=>dbs[Math.floor(p*(dbs.length-1))];
+ const floor=pc(.1),peak=pc(.95);
+ if(peak<-45||peak-floor<10)return say('I didn’t hear enough voice. Move closer to the mic, sing louder, and try again.',1);
+ const v=fr.filter(x=>x.db>floor+(peak-floor)*.5);
+ const avg=([a,b])=>{let s=0,c=0;v.forEach(x=>{for(let i=a;i<=b;i++){s+=x.f[i];c++}});return s/c};
+ const m={};for(const k in B)m[k]=avg(B[k])-avg(B.mid);
+ const tg={low:-2,mud:0,pres:-5,sib:-12,air:-20};
+ const adj=k=>(tg[k]-m[k])*.5;
+ const range=pc(.95)-pc(.3);
+ setP({
+  gate:clamp(Math.round(floor+8),-70,-35),
+  warm:clamp(adj('low'),-3,6),mud:clamp(adj('mud'),-6,1),pres:clamp(adj('pres'),-3,6),air:clamp(adj('air'),-2,6),
+  deess:clamp(adj('sib')*1.2,-8,0),
+  comp:clamp(Math.round(peak-12),-35,-12),ratio:range>20?5:range>12?3.5:2.5
+ });
+ document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));
+ say('Done. Your gate, tone, S control and compression now match your voice. Fine-tune any setting below.');
+};
+
+/* beat */
+let backing=null,bSrc=null,bpm=102,step=0,nextT=0,beatOn=false,pat='afro',bTimer,bGain,noiseBuf;
+const PAT={
+ afro:{n:'Afrobeat',bpm:102,k:[0,3,6,10],s:[4,12],r:[7,15],h:[0,2,4,6,8,10,12,14],sh:[1,3,5,7,9,11,13,15]},
+ pop:{n:'Pop',bpm:118,k:[0,4,8,12],s:[4,12],r:[],h:[2,6,10,14],sh:[]},
+ trap:{n:'Trap',bpm:140,k:[0,7,10],s:[8],r:[],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],sh:[]}
+};
+Object.entries(PAT).forEach(([k,p])=>{const b=document.createElement('button');b.textContent=p.n;if(k===pat)b.classList.add('on');b.onclick=()=>{pat=k;setBpm(p.bpm);$('#bpm').value=p.bpm;document.querySelectorAll('#pats button').forEach(x=>x.classList.remove('on'));b.classList.add('on')};$('#pats').append(b)});
+function setBpm(v){bpm=+v;$('#bpmV').textContent=bpm+' BPM';if(N.dl)N.dl.delayTime.value=60/bpm*.75}
+$('#bpm').oninput=e=>setBpm(e.target.value);
+$('#bv').oninput=e=>{$('#bvV').textContent=e.target.value+'%';if(bGain)bGain.gain.value=e.target.value/100};
+function noise(){if(!noiseBuf){noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}return noiseBuf}
+function hit(t,type,f,len,vol){const s=ctx.createBufferSource();s.buffer=noise();const fl=nd(type,f,null,1.2),g=ctx.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+len);s.connect(fl).connect(g).connect(bGain);s.start(t,Math.random()*.5,len+.05)}
+function kick(t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(g).connect(bGain);o.start(t);o.stop(t+.45)}
+function sched(){const p=PAT[pat];while(nextT<ctx.currentTime+.15){const t=nextT,i=step;
+ if(p.k.includes(i))kick(t);if(p.s.includes(i))hit(t,'bandpass',1800,.18,.8);if(p.r.includes(i))hit(t,'highpass',3500,.05,.5);
+ if(p.h.includes(i))hit(t,'highpass',8000,.05,.35);if(p.sh.includes(i))hit(t,'bandpass',6000,.04,.2);
+ nextT+=60/bpm/4;step=(step+1)%16}}
+function beat(on){
+ ensure();
+ if(on&&!beatOn){if(!bGain){bGain=ctx.createGain();bGain.gain.value=$('#bv').value/100;bGain.connect(ctx.destination)}if(backing){bSrc=ctx.createBufferSource();bSrc.buffer=backing;bSrc.connect(bGain);bSrc.start(ctx.currentTime+.08)}else{step=0;nextT=ctx.currentTime+.08;bTimer=setInterval(sched,25)}beatOn=true}
+ if(!on&&beatOn){clearInterval(bTimer);if(bSrc){try{bSrc.stop()}catch(e){}bSrc=null}beatOn=false}
+ $('#beatBtn').textContent=beatOn?'Stop beat':'Play beat';$('#beatBtn').classList.toggle('on',beatOn);
+}
+$('#beatBtn').onclick=()=>beat(!beatOn);
+
+$('#file').onchange=async e=>{const f=e.target.files[0];if(!f)return;beat(false);try{ensure();say('Loading '+f.name+'…');backing=await ctx.decodeAudioData(await f.arrayBuffer());$('#bname').textContent='Loaded: '+f.name;$('#bpm').disabled=true;document.querySelectorAll('#pats button').forEach(x=>x.classList.remove('on'));$('#useBuilt').hidden=false;say('Instrumental loaded. It plays when you record or tap Play beat.')}catch(err){backing=null;say('Couldn’t read that file. Try an MP3, WAV or M4A.',1)}e.target.value=''};
+$('#useBuilt').onclick=()=>{beat(false);backing=null;$('#bname').textContent='';$('#bpm').disabled=false;$('#useBuilt').hidden=true;document.querySelector('#pats button').classList.add('on');say('Back to the built-in beat.')};
+$('#nudge').oninput=e=>$('#nV').textContent=e.target.value+' ms';
+/* recording */
+$('#recBtn').onclick=()=>{
+ if(rec&&rec.state==='recording'){rec.stop();return}
+ if(!micOn)return say('Turn on the mic first.',1);
+ chunks=[];const mt=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+ try{rec=new MediaRecorder(N.rd.stream,mt?{mimeType:mt}:undefined)}catch(e){return say('This browser can’t record audio. Try Chrome or Safari.',1)}
+ rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+ rec.onstop=()=>{clearInterval(tInt);$('#timer').textContent='';$('#recBtn').textContent='Record take';$('#recBtn').classList.remove('live');beat(false);addTake(new Blob(chunks,{type:rec.mimeType}),(performance.now()-recStart)/1000)};
+ beat(true);rec.start();recStart=performance.now();
+ $('#recBtn').textContent='Stop recording';$('#recBtn').classList.add('live');
+ tInt=setInterval(()=>$('#timer').textContent=((performance.now()-recStart)/1000).toFixed(0)+'s',250);
+};
+let tk=0;
+function addTake(blob,sec){
+ tk++;const url=URL.createObjectURL(blob),d=document.createElement('div');d.className='take';
+ d.innerHTML=`<b>Take ${tk}</b> <span style="color:var(--mute)">${sec.toFixed(0)}s</span><audio controls src="${url}"></audio><div class="row"><button class="pb">Play with beat</button><button class="del">Delete</button></div>`;
+ const a=d.querySelector('audio');
+ d.querySelector('.pb').onclick=()=>{beat(true);a.currentTime=$('#nudge').value/1000;setTimeout(()=>a.play(),80)};
+ a.onpause=()=>beat(false);
+ d.querySelector('.del').onclick=()=>{URL.revokeObjectURL(url);d.remove()};
+ $('#takes').prepend(d);
+}
+</script>
+</body>
+</html>
